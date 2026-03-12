@@ -1,0 +1,3 @@
+CORE_ROOT = $(if $(AHRI_TRE_C_ROOT),$(AHRI_TRE_C_ROOT),../..)
+PKG_CPPFLAGS = -I$(CORE_ROOT)/c_core/include
+PKG_LIBS = -L$(CORE_ROOT)/c_core/build/Release -L$(CORE_ROOT)/c_core/build -lahri_tre_c
