@@ -1,5 +1,23 @@
 ahri_tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) {
   if (!nzchar(core_path)) {
+    staged_core_dir <- system.file("ahri_tre_core", package = "AHRITREC")
+    if (nzchar(staged_core_dir)) {
+      if (.Platform$OS.type == "windows") {
+        staged_candidates <- file.path(staged_core_dir, c("ahri_tre_c.dll", "libahri_tre_c.dll"))
+      } else if (Sys.info()[["sysname"]] == "Darwin") {
+        staged_candidates <- file.path(staged_core_dir, "libahri_tre_c.dylib")
+      } else {
+        staged_candidates <- file.path(staged_core_dir, "libahri_tre_c.so")
+      }
+
+      staged_found <- staged_candidates[file.exists(staged_candidates)]
+      if (length(staged_found) > 0) {
+        core_path <- staged_found[[1]]
+      }
+    }
+  }
+
+  if (!nzchar(core_path)) {
     root_env <- Sys.getenv("AHRI_TRE_C_ROOT", unset = "")
     roots <- character(0)
     if (nzchar(root_env)) {
@@ -53,7 +71,7 @@ ahri_tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) 
     return(invisible(core_path))
   }
 
-  stop("Could not locate AHRI TRE C shared library. Set AHRI_TRE_C_LIB.")
+  stop("Could not locate AHRI TRE C shared library. Reinstall package or set AHRI_TRE_C_LIB.")
 }
 
 ahri_tre_version <- function() {
@@ -84,8 +102,16 @@ ahri_tre_parse_in_list_values_json <- function(values) {
   .Call("ahri_tre_parse_in_list_values_json_R", as.character(values))
 }
 
+parse_in_list_values <- function(values) {
+  ahri_tre_parse_in_list_values_json(values)
+}
+
 ahri_tre_parse_check_constraint_values_json <- function(constraint_def, column_name) {
   .Call("ahri_tre_parse_check_constraint_values_json_R", as.character(constraint_def), as.character(column_name))
+}
+
+parse_check_constraint_values <- function(constraint_def, column_name) {
+  ahri_tre_parse_check_constraint_values_json(constraint_def, column_name)
 }
 
 ahri_tre_map_redcap_value_type <- function(field_type, validation = NULL) {
@@ -96,8 +122,16 @@ ahri_tre_map_redcap_value_type <- function(field_type, validation = NULL) {
   }
 }
 
+map_value_type <- function(field_type, validation = NULL) {
+  ahri_tre_map_redcap_value_type(field_type, validation)
+}
+
 ahri_tre_parse_redcap_choices_json <- function(choices) {
   .Call("ahri_tre_parse_redcap_choices_json_R", as.character(choices))
+}
+
+parse_redcap_choices <- function(choices) {
+  ahri_tre_parse_redcap_choices_json(choices)
 }
 
 ahri_tre_strip_html <- function(text) {
@@ -114,4 +148,8 @@ ahri_tre_get_redcap_choices_for_field_json <- function(field_type, choices = NUL
   } else {
     .Call("ahri_tre_get_redcap_choices_for_field_json_R", as.character(field_type), as.character(choices))
   }
+}
+
+get_redcap_choices_for_field <- function(field_type, choices = NULL) {
+  ahri_tre_get_redcap_choices_for_field_json(field_type, choices)
 }
