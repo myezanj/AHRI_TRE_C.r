@@ -49,7 +49,7 @@ ahri_tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) 
   }
 
   if (nzchar(core_path) && file.exists(core_path)) {
-    dyn.load(core_path)
+    dyn.load(core_path, local = FALSE)
     return(invisible(core_path))
   }
 

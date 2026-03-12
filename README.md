@@ -1,29 +1,36 @@
-# AHRITREC (R)
+# AHRITREC
 
 R package bindings for the AHRI TRE C core.
 
-This package is designed to call the C core from the AHRI_TRE.C project.
+## Prerequisites
 
-## Build C core first
+Build the C core first (from your AHRI_TRE.C checkout):
 
 ```bash
 cmake -S c_core -B c_core/build
 cmake --build c_core/build --config Release
 ```
 
-If AHRI_TRE.C is a sibling repository, set:
+If the C repository is not discoverable as a sibling checkout, set one of:
 
 ```r
 Sys.setenv(AHRI_TRE_C_ROOT = "C:/path/to/AHRI_TRE.C")
+# or
+Sys.setenv(AHRI_TRE_C_LIB = "C:/path/to/ahri_tre_c.dll")
 ```
 
-## Install package
+## Install
+
+From this package root directory:
 
 ```r
-install.packages("wrappers/R", repos = NULL, type = "source")
+install.packages(".", repos = NULL, type = "source")
+```
+
+## Usage
+
+```r
 library(AHRITREC)
 ahri_tre_load()
 ahri_tre_version()
 ```
-
-Set `AHRI_TRE_C_LIB` to point directly to the C core shared library if needed.

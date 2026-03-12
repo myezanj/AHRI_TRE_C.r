@@ -1,0 +1,8 @@
+^\.git$
+^\.gitignore$
+^\.gitattributes$
+^ahri_tre\.R$
+^AHRITREC\.Rproj$
+^AHRITREC_.*\.tar\.gz$
+^AHRITREC\.Rcheck$
+^\.Rproj\.user$
