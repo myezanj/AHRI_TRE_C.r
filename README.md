@@ -4,7 +4,17 @@ R package bindings for the AHRI TRE C core.
 
 ## Prerequisites
 
+<<<<<<< HEAD
 Build the C core first (from your AHRI_TRE.C checkout):
+=======
+## C ABI symbol policy
+
+The R bridge now uses Julia-style unprefixed C symbols as the primary binding targets (for example: `version`, `last_error`, `map_value_type`).
+
+Prefixed symbols (for example: `ahri_tre_version`, `ahri_tre_last_error`) are still exported by the C core as compatibility aliases and remain safe for existing code.
+
+## Build C core first
+>>>>>>> fc2e963b67ebb664176554cfadfa715565811bb2
 
 ```bash
 cmake -S c_core -B c_core/build
