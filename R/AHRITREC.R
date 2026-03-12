@@ -84,8 +84,16 @@ ahri_tre_parse_in_list_values_json <- function(values) {
   .Call("ahri_tre_parse_in_list_values_json_R", as.character(values))
 }
 
+parse_in_list_values <- function(values) {
+  ahri_tre_parse_in_list_values_json(values)
+}
+
 ahri_tre_parse_check_constraint_values_json <- function(constraint_def, column_name) {
   .Call("ahri_tre_parse_check_constraint_values_json_R", as.character(constraint_def), as.character(column_name))
+}
+
+parse_check_constraint_values <- function(constraint_def, column_name) {
+  ahri_tre_parse_check_constraint_values_json(constraint_def, column_name)
 }
 
 ahri_tre_map_redcap_value_type <- function(field_type, validation = NULL) {
@@ -96,8 +104,16 @@ ahri_tre_map_redcap_value_type <- function(field_type, validation = NULL) {
   }
 }
 
+map_value_type <- function(field_type, validation = NULL) {
+  ahri_tre_map_redcap_value_type(field_type, validation)
+}
+
 ahri_tre_parse_redcap_choices_json <- function(choices) {
   .Call("ahri_tre_parse_redcap_choices_json_R", as.character(choices))
+}
+
+parse_redcap_choices <- function(choices) {
+  ahri_tre_parse_redcap_choices_json(choices)
 }
 
 ahri_tre_strip_html <- function(text) {
@@ -114,4 +130,8 @@ ahri_tre_get_redcap_choices_for_field_json <- function(field_type, choices = NUL
   } else {
     .Call("ahri_tre_get_redcap_choices_for_field_json_R", as.character(field_type), as.character(choices))
   }
+}
+
+get_redcap_choices_for_field <- function(field_type, choices = NULL) {
+  ahri_tre_get_redcap_choices_for_field_json(field_type, choices)
 }
