@@ -1,50 +1,58 @@
 \name{AHRITREC}
-\alias{ahri_tre_load}
-\alias{ahri_tre_version}
-\alias{ahri_tre_sha256_file_hex}
-\alias{ahri_tre_verify_sha256_file}
-\alias{ahri_tre_parse_flavour}
-\alias{ahri_tre_map_sql_type_to_tre}
-\alias{ahri_tre_extract_table_from_sql}
-\alias{ahri_tre_parse_in_list_values_json}
-\alias{ahri_tre_parse_check_constraint_values_json}
-\alias{ahri_tre_map_redcap_value_type}
-\alias{ahri_tre_parse_redcap_choices_json}
-\alias{ahri_tre_strip_html}
-\alias{ahri_tre_infer_label_from_field_name}
-\alias{ahri_tre_get_redcap_choices_for_field_json}
+\alias{tre_load}
+\alias{version}
+\alias{sha256_file_hex}
+\alias{verify_sha256_file}
+\alias{parse_flavour}
+\alias{map_sql_type_to_tre}
+\alias{extract_table_from_sql}
+\alias{parse_in_list_values_json}
+\alias{parse_in_list_values}
+\alias{parse_check_constraint_values_json}
+\alias{parse_check_constraint_values}
+\alias{map_value_type}
+\alias{parse_redcap_choices_json}
+\alias{parse_redcap_choices}
+\alias{strip_html}
+\alias{infer_label_from_field_name}
+\alias{get_redcap_choices_for_field_json}
+\alias{get_redcap_choices_for_field}
 \title{AHRI TRE C Core R Bindings}
 \description{
 Wrapper functions for loading and calling the AHRI TRE C core from R.
 }
 \usage{
-ahri_tre_load(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = ""))
+tre_load(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = ""))
 
-ahri_tre_version()
+version()
 
-ahri_tre_sha256_file_hex(path)
+sha256_file_hex(path)
 
-ahri_tre_verify_sha256_file(path, expected_hex)
+verify_sha256_file(path, expected_hex)
 
-ahri_tre_parse_flavour(flavour)
+parse_flavour(flavour)
 
-ahri_tre_map_sql_type_to_tre(sql_type)
+map_sql_type_to_tre(sql_type)
 
-ahri_tre_extract_table_from_sql(sql)
+extract_table_from_sql(sql)
 
-ahri_tre_parse_in_list_values_json(values)
+parse_in_list_values_json(values)
+parse_in_list_values(values)
 
-ahri_tre_parse_check_constraint_values_json(constraint_def, column_name)
+parse_check_constraint_values_json(constraint_def, column_name)
+parse_check_constraint_values(constraint_def, column_name)
 
-ahri_tre_map_redcap_value_type(field_type, validation = NULL)
+map_value_type(field_type, validation = NULL)
 
-ahri_tre_parse_redcap_choices_json(choices)
+parse_redcap_choices_json(choices)
+parse_redcap_choices(choices)
 
-ahri_tre_strip_html(text)
+strip_html(text)
 
-ahri_tre_infer_label_from_field_name(field_name)
+infer_label_from_field_name(field_name)
 
-ahri_tre_get_redcap_choices_for_field_json(field_type, choices = NULL)
+get_redcap_choices_for_field_json(field_type, choices = NULL)
+get_redcap_choices_for_field(field_type, choices = NULL)
 }
 \arguments{
   \item{core_path}{Optional absolute path to the AHRI TRE C shared library.}
@@ -80,14 +88,13 @@ Function return values are provided by the AHRI TRE C core API and include
 character strings, logical values, integers, JSON text, and small named lists.
 }
 \details{
-\code{ahri_tre_load()} attempts to locate the core shared library using
-\code{AHRI_TRE_C_LIB}, \code{AHRI_TRE_C_ROOT}, and common sibling build paths.
+Unprefixed function names are canonical and match the Julia-facing C API naming.
+The C bridge keeps internal symbol fallback support for prefixed dependency builds.
 }
 \examples{
 \dontrun{
-Sys.setenv(AHRI_TRE_C_ROOT = "C:/path/to/AHRI_TRE.C")
 library(AHRITREC)
-ahri_tre_load()
-ahri_tre_version()
+tre_load()
+version()
 }
 }
