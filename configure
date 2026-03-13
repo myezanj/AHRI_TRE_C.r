@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+sh "$(dirname "$0")/tools/bootstrap-ahri-tre-c.sh"
