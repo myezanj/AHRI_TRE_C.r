@@ -1,4 +1,5 @@
 ^\.git$
+^\.github$
 ^\.gitignore$
 ^\.gitattributes$
 ^ahri_tre\.R$
@@ -6,3 +7,4 @@
 ^AHRITREC_.*\.tar\.gz$
 ^AHRITREC\.Rcheck$
 ^\.Rproj\.user$
+^inst/tre_core/.*\.(dll|so|dylib)$
