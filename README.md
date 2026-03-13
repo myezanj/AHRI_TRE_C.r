@@ -1,32 +1,26 @@
-# AHRITREC
+﻿# AHRITREC
 
 R package bindings for the AHRI TRE C core.
 
 ## Prerequisites
 
-<<<<<<< HEAD
-Build the C core first (from your AHRI_TRE.C checkout):
-=======
-## C ABI symbol policy
+When installing from source, this package automatically downloads `AHRI_TRE.C`,
+builds the C core with `cmake`, and stages the shared library for runtime use.
 
-The R bridge now uses Julia-style unprefixed C symbols as the primary binding targets (for example: `version`, `last_error`, `map_value_type`).
+Required on PATH:
 
-Prefixed symbols (for example: `ahri_tre_version`, `ahri_tre_last_error`) are still exported by the C core as compatibility aliases and remain safe for existing code.
+- `git`
+- `cmake`
 
-## Build C core first
->>>>>>> fc2e963b67ebb664176554cfadfa715565811bb2
-
-```bash
-cmake -S c_core -B c_core/build
-cmake --build c_core/build --config Release
-```
-
-If the C repository is not discoverable as a sibling checkout, set one of:
+Optional installer overrides:
 
 ```r
+# Use a local C repo instead of auto-downloading
 Sys.setenv(AHRI_TRE_C_ROOT = "C:/path/to/AHRI_TRE.C")
-# or
-Sys.setenv(AHRI_TRE_C_LIB = "C:/path/to/ahri_tre_c.dll")
+
+# Override download source/ref
+Sys.setenv(AHRI_TRE_C_GIT_URL = "https://github.com/AHRIORG/AHRI_TRE.C.git")
+Sys.setenv(AHRI_TRE_C_REF = "main")
 ```
 
 ## Install
@@ -41,6 +35,6 @@ install.packages(".", repos = NULL, type = "source")
 
 ```r
 library(AHRITREC)
-ahri_tre_load()
-ahri_tre_version()
+tre_load()
+version()
 ```
