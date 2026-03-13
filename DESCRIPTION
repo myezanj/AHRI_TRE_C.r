@@ -2,13 +2,19 @@ Package: AHRITREC
 Type: Package
 Title: R Bindings for AHRI TRE C Core
 Version: 0.1.1
-Authors@R: c(person(given = "AHRI", family = "Team", role = c("aut", "cre"), email = "noreply@example.org"))
+Authors@R: c(person(given = "Njabulo", family = "Myeza", role = c("aut", "cre"), email = "njabulo.myeza@ahri.org"))
 Description: R interface to the AHRI TRE C core shared library.
 License: MIT + file LICENSE
 Depends: R (>= 3.6.0)
-Suggests: testthat (>= 3.0.0)
+Suggests: testthat (>= 3.0.0),
+	DBI,
+	RPostgres,
+	duckdb,
+	logger,
+	dplyr,
+	pkgload
 Encoding: UTF-8
 NeedsCompilation: yes
-SystemRequirements: AHRI_TRE.C core shared library
+SystemRequirements: AHRI_TRE.C core shared library, git, cmake
 Config/testthat/edition: 3
 RoxygenNote: 7.3.3
