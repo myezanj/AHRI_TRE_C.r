@@ -17,4 +17,5 @@ Encoding: UTF-8
 NeedsCompilation: yes
 SystemRequirements: AHRI_TRE.C core shared library, git, cmake
 Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

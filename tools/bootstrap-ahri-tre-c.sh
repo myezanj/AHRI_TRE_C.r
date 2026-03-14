@@ -3,11 +3,42 @@ set -eu
 
 PKG_DIR=$(cd "$(dirname "$0")/.." && pwd)
 STAGE_DIR="$PKG_DIR/inst/tre_core"
+REF="${AHRI_TRE_C_REF:-main}"
+PULL_LATEST="${AHRI_TRE_C_PULL_LATEST:-1}"
 
 if [ "${AHRI_TRE_C_SKIP_BOOTSTRAP:-0}" = "1" ]; then
   echo "Skipping AHRI_TRE.C bootstrap because AHRI_TRE_C_SKIP_BOOTSTRAP=1"
   exit 0
 fi
+
+resolve_origin_url() {
+  repo_path="$1"
+
+  if command -v git >/dev/null 2>&1 && [ -d "$repo_path/.git" ]; then
+    git -C "$repo_path" config --get remote.origin.url 2>/dev/null || true
+  fi
+}
+
+clone_latest_checkout() {
+  checkout_dir="$1"
+  clone_urls="$2"
+
+  rm -rf "$checkout_dir"
+
+  CLONED=0
+  for u in $clone_urls; do
+    echo "Trying to clone AHRI_TRE.C from $u (ref: $REF)"
+    if git clone --depth 1 --branch "$REF" "$u" "$checkout_dir"; then
+      CLONED=1
+      break
+    fi
+  done
+
+  if [ "$CLONED" -ne 1 ]; then
+    echo "ERROR: Could not clone AHRI_TRE.C. Set AHRI_TRE_C_GIT_URL or disable refresh with AHRI_TRE_C_PULL_LATEST=0." >&2
+    exit 1
+  fi
+}
 
 mkdir -p "$STAGE_DIR"
 rm -f \
@@ -20,49 +51,55 @@ rm -f \
   "$STAGE_DIR/libahri_tre_c.so" \
   "$STAGE_DIR/libahri_tre_c.dylib"
 
-if [ -n "${AHRI_TRE_C_ROOT:-}" ]; then
+WORK_DIR="${AHRI_TRE_C_WORK_DIR:-${TMPDIR:-${TEMP:-${TMP:-/tmp}}}/ahri_tre_c_work}"
+SYNC_ROOT="$WORK_DIR/AHRI_TRE.C"
+DEFAULT_CLONE_URLS="https://github.com/myezanj/AHRI_TRE.c.git git@github.com:myezanj/AHRI_TRE.c.git https://github.com/AHRIORG/AHRI_TRE.C.git git@github.com:AHRIORG/AHRI_TRE.C.git"
+
+if [ "$PULL_LATEST" = "1" ]; then
+  if ! command -v git >/dev/null 2>&1; then
+    echo "ERROR: git is required to refresh AHRI_TRE.C during package install." >&2
+    exit 1
+  fi
+
+  mkdir -p "$WORK_DIR"
+  CLONE_URLS="${AHRI_TRE_C_GIT_URL:-}"
+
+  if [ -n "${AHRI_TRE_C_ROOT:-}" ]; then
+    ROOT_REMOTE=$(resolve_origin_url "$AHRI_TRE_C_ROOT")
+    if [ -n "$ROOT_REMOTE" ]; then
+      CLONE_URLS="$ROOT_REMOTE ${CLONE_URLS:-}"
+    fi
+  else
+    for local_candidate in "$PKG_DIR/../AHRI_TRE.C" "$PKG_DIR/../AHRI_TRE.c"; do
+      if [ -d "$local_candidate/c_core" ]; then
+        CANDIDATE_REMOTE=$(resolve_origin_url "$local_candidate")
+        if [ -n "$CANDIDATE_REMOTE" ]; then
+          CLONE_URLS="$CANDIDATE_REMOTE ${CLONE_URLS:-}"
+        fi
+        break
+      fi
+    done
+  fi
+
+  CLONE_URLS="${CLONE_URLS:-$DEFAULT_CLONE_URLS} $DEFAULT_CLONE_URLS"
+  clone_latest_checkout "$SYNC_ROOT" "$CLONE_URLS"
+  SRC_ROOT="$SYNC_ROOT"
+  echo "Using refreshed AHRI_TRE.C checkout: $SRC_ROOT"
+elif [ -n "${AHRI_TRE_C_ROOT:-}" ]; then
   SRC_ROOT="$AHRI_TRE_C_ROOT"
-  echo "Using AHRI_TRE.C from AHRI_TRE_C_ROOT: $SRC_ROOT"
+  echo "Using AHRI_TRE.C from AHRI_TRE_C_ROOT without remote refresh: $SRC_ROOT"
 else
-  # Prefer a sibling checkout when available.
   for local_candidate in "$PKG_DIR/../AHRI_TRE.C" "$PKG_DIR/../AHRI_TRE.c"; do
     if [ -d "$local_candidate/c_core" ]; then
       SRC_ROOT="$local_candidate"
-      echo "Using sibling AHRI_TRE.C checkout: $SRC_ROOT"
+      echo "Using sibling AHRI_TRE.C checkout without remote refresh: $SRC_ROOT"
       break
     fi
   done
 
   if [ -z "${SRC_ROOT:-}" ]; then
-    if ! command -v git >/dev/null 2>&1; then
-      echo "ERROR: git is required to download AHRI_TRE.C during package install." >&2
-      exit 1
-    fi
-
-    REF="${AHRI_TRE_C_REF:-main}"
-    WORK_DIR="$PKG_DIR/tools/.ahri_tre_c_work"
-    SRC_ROOT="$WORK_DIR/AHRI_TRE.C"
-    mkdir -p "$WORK_DIR"
-
-    if [ -d "$SRC_ROOT/.git" ]; then
-      echo "Updating existing AHRI_TRE.C checkout at $SRC_ROOT"
-      git -C "$SRC_ROOT" fetch --depth 1 origin "$REF"
-      git -C "$SRC_ROOT" checkout --detach FETCH_HEAD
-    else
-      CLONE_URLS="${AHRI_TRE_C_GIT_URL:-https://github.com/AHRIORG/AHRI_TRE.C.git git@github.com:AHRIORG/AHRI_TRE.C.git}"
-      CLONED=0
-      for u in $CLONE_URLS; do
-        echo "Trying to clone AHRI_TRE.C from $u (ref: $REF)"
-        if git clone --depth 1 --branch "$REF" "$u" "$SRC_ROOT"; then
-          CLONED=1
-          break
-        fi
-      done
-      if [ "$CLONED" -ne 1 ]; then
-        echo "ERROR: Could not clone AHRI_TRE.C. Set AHRI_TRE_C_ROOT or AHRI_TRE_C_GIT_URL." >&2
-        exit 1
-      fi
-    fi
+    echo "ERROR: AHRI_TRE_C_PULL_LATEST=0 requires AHRI_TRE_C_ROOT or a sibling AHRI_TRE.C checkout." >&2
+    exit 1
   fi
 fi
 
@@ -76,7 +113,12 @@ if ! command -v cmake >/dev/null 2>&1; then
   exit 1
 fi
 
-BUILD_DIR="${AHRI_TRE_C_BUILD_DIR:-$SRC_ROOT/c_core/build}"
+BUILD_DIR="${AHRI_TRE_C_BUILD_DIR:-$STAGE_DIR/.build}"
+
+# Recreate build dir to avoid stale CMakeCache.txt conflicts when source path changes
+# (e.g., package checks in temporary directories).
+rm -rf "$BUILD_DIR"
+mkdir -p "$BUILD_DIR"
 
 echo "Configuring AHRI_TRE.C core in $BUILD_DIR"
 cmake -S "$SRC_ROOT/c_core" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
@@ -131,3 +173,5 @@ if [ "$BASENAME" = "tre_c.dll" ]; then
 fi
 
 echo "Staged AHRI_TRE.C shared library: $STAGE_DIR/$BASENAME"
+
+rm -rf "$BUILD_DIR"
