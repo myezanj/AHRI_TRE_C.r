@@ -1,2 +1,9 @@
 PKG_CPPFLAGS =
 PKG_LIBS =
+
+.PHONY: tre_core_bootstrap
+
+all: tre_core_bootstrap
+
+tre_core_bootstrap:
+	"$(SHELL)" "../tools/bootstrap-ahri-tre-c.sh"

@@ -2,6 +2,7 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -89,7 +90,9 @@ static fn_last_error p_last_error = NULL;
 static int symbols_initialized = 0;
 
 #ifdef _WIN32
-static void *lookup_symbol(const char *name) {
+typedef FARPROC tre_symbol_ptr;
+
+static tre_symbol_ptr lookup_symbol(const char *name) {
     const char *module_names[] = {
         "tre_c.dll",
         "libtre_c.dll",
@@ -115,21 +118,34 @@ static void *lookup_symbol(const char *name) {
     if (mod == NULL) {
         return NULL;
     }
-    return (void *)GetProcAddress(mod, name);
+    return GetProcAddress(mod, name);
 }
 #else
-static void *lookup_symbol(const char *name) {
+typedef void *tre_symbol_ptr;
+
+static tre_symbol_ptr lookup_symbol(const char *name) {
     return dlsym(RTLD_DEFAULT, name);
 }
 #endif
 
-static void *lookup_symbol_any(const char *primary_name, const char *fallback_name) {
-    void *sym = lookup_symbol(primary_name);
+static tre_symbol_ptr lookup_symbol_any(const char *primary_name, const char *fallback_name) {
+    tre_symbol_ptr sym = lookup_symbol(primary_name);
     if (sym != NULL) {
         return sym;
     }
     return lookup_symbol(fallback_name);
 }
+
+static void load_function_pointer(void *target, size_t target_size, tre_symbol_ptr symbol) {
+    size_t copy_size = target_size < sizeof(symbol) ? target_size : sizeof(symbol);
+    memset(target, 0, target_size);
+    if (symbol != NULL) {
+        memcpy(target, &symbol, copy_size);
+    }
+}
+
+#define LOAD_CORE_SYMBOL(slot, primary_name, fallback_name) \
+    load_function_pointer(&(slot), sizeof(slot), lookup_symbol_any((primary_name), (fallback_name)))
 
 static const char *last_error_message(void) {
     if (p_last_error == NULL) {
@@ -186,43 +202,43 @@ static void ensure_core_symbols_loaded(void) {
         return;
     }
 
-    p_version = (fn_version)lookup_symbol_any("version", "ahri_tre_version");
-    p_sha256_file_hex = (fn_sha256_file_hex)lookup_symbol_any("sha256_file_hex", "ahri_tre_sha256_file_hex");
-    p_verify_sha256_file = (fn_verify_sha256_file)lookup_symbol_any("verify_sha256_file", "ahri_tre_verify_sha256_file");
-    p_path_to_file_uri = (fn_path_to_file_uri)lookup_symbol_any("path_to_file_uri", "ahri_tre_path_to_file_uri");
-    p_file_uri_to_path = (fn_file_uri_to_path)lookup_symbol_any("file_uri_to_path", "ahri_tre_file_uri_to_path");
-    p_emptydir = (fn_emptydir)lookup_symbol_any("emptydir", "ahri_tre_emptydir");
-    p_is_ncname = (fn_is_ncname)lookup_symbol_any("is_ncname", "ahri_tre_is_ncname");
-    p_to_ncname = (fn_to_ncname)lookup_symbol_any("to_ncname", "ahri_tre_to_ncname");
-    p_parse_flavour = (fn_parse_flavour)lookup_symbol_any("parse_flavour", "ahri_tre_parse_flavour");
-    p_map_sql_type_to_tre = (fn_map_sql_type_to_tre)lookup_symbol_any("map_sql_type_to_tre", "ahri_tre_map_sql_type_to_tre");
-    p_map_sql_type_to_tre_for_flavour = (fn_map_sql_type_to_tre_for_flavour)lookup_symbol_any("map_sql_type_to_tre_for_flavour", "ahri_tre_map_sql_type_to_tre_for_flavour");
-    p_get_datasetname = (fn_get_datasetname)lookup_symbol_any("get_datasetname", "ahri_tre_get_datasetname");
-    p_get_datafilename = (fn_get_datafilename)lookup_symbol_any("get_datafilename", "ahri_tre_get_datafilename");
-    p_get_datalake_file_path = (fn_get_datalake_file_path)lookup_symbol_any("get_datalake_file_path", "ahri_tre_get_datalake_file_path");
-    p_prepare_datafile_digest = (fn_prepare_datafile_digest)lookup_symbol_any("prepare_datafile_digest", "ahri_tre_prepare_datafile_digest");
-    p_prepare_datafile_json = (fn_prepare_datafile_json)lookup_symbol_any("prepare_datafile_json", "ahri_tre_prepare_datafile_json");
-    p_normalise_orcid_rolename = (fn_normalise_orcid_rolename)lookup_symbol_any("normalise_orcid_rolename", "ahri_tre_normalise_orcid_rolename");
-    p_makeparams_json = (fn_makeparams_json)lookup_symbol_any("makeparams_json", "ahri_tre_makeparams_json");
-    p_quote_ident = (fn_quote_ident)lookup_symbol_any("quote_ident", "ahri_tre_quote_ident");
-    p_quote_qualified_identifier = (fn_quote_qualified_identifier)lookup_symbol_any("quote_qualified_identifier", "ahri_tre_quote_qualified_identifier");
-    p_quote_sql_str = (fn_quote_sql_str)lookup_symbol_any("quote_sql_str", "ahri_tre_quote_sql_str");
-    p_julia_type_to_sql_string = (fn_julia_type_to_sql_string)lookup_symbol_any("julia_type_to_sql_string", "ahri_tre_julia_type_to_sql_string");
-    p_tre_type_to_duckdb_sql = (fn_tre_type_to_duckdb_sql)lookup_symbol_any("tre_type_to_duckdb_sql", "ahri_tre_tre_type_to_duckdb_sql");
-    p_extract_table_from_sql = (fn_extract_table_from_sql)lookup_symbol_any("extract_table_from_sql", "ahri_tre_extract_table_from_sql");
-    p_parse_in_list_values_json = (fn_parse_in_list_values_json)lookup_symbol_any("parse_in_list_values_json", "ahri_tre_parse_in_list_values_json");
-    p_parse_check_constraint_values_json = (fn_parse_check_constraint_values_json)lookup_symbol_any("parse_check_constraint_values_json", "ahri_tre_parse_check_constraint_values_json");
-    p_map_value_type = (fn_map_value_type)lookup_symbol_any("map_value_type", "ahri_tre_map_redcap_value_type");
-    p_parse_redcap_choices_json = (fn_parse_redcap_choices_json)lookup_symbol_any("parse_redcap_choices_json", "ahri_tre_parse_redcap_choices_json");
-    p_strip_html = (fn_strip_html)lookup_symbol_any("strip_html", "ahri_tre_strip_html");
-    p_infer_label_from_field_name = (fn_infer_label_from_field_name)lookup_symbol_any("infer_label_from_field_name", "ahri_tre_infer_label_from_field_name");
-    p_get_redcap_choices_for_field_json = (fn_get_redcap_choices_for_field_json)lookup_symbol_any("get_redcap_choices_for_field_json", "ahri_tre_get_redcap_choices_for_field_json");
-    p_normalize_git_remote = (fn_normalize_git_remote)lookup_symbol_any("normalize_git_remote", "ahri_tre_normalize_git_remote");
-    p_canonical_path = (fn_canonical_path)lookup_symbol_any("canonical_path", "ahri_tre_canonical_path");
-    p_git_commit_info_json = (fn_git_commit_info_json)lookup_symbol_any("git_commit_info_json", "ahri_tre_git_commit_info_json");
-    p_caller_file_runtime = (fn_caller_file_runtime)lookup_symbol_any("caller_file_runtime", "ahri_tre_caller_file_runtime");
-    p_free_ptr = (fn_free_ptr)lookup_symbol_any("free_ptr", "ahri_tre_free");
-    p_last_error = (fn_last_error)lookup_symbol_any("last_error", "ahri_tre_last_error");
+    LOAD_CORE_SYMBOL(p_version, "version", "ahri_tre_version");
+    LOAD_CORE_SYMBOL(p_sha256_file_hex, "sha256_file_hex", "ahri_tre_sha256_file_hex");
+    LOAD_CORE_SYMBOL(p_verify_sha256_file, "verify_sha256_file", "ahri_tre_verify_sha256_file");
+    LOAD_CORE_SYMBOL(p_path_to_file_uri, "path_to_file_uri", "ahri_tre_path_to_file_uri");
+    LOAD_CORE_SYMBOL(p_file_uri_to_path, "file_uri_to_path", "ahri_tre_file_uri_to_path");
+    LOAD_CORE_SYMBOL(p_emptydir, "emptydir", "ahri_tre_emptydir");
+    LOAD_CORE_SYMBOL(p_is_ncname, "is_ncname", "ahri_tre_is_ncname");
+    LOAD_CORE_SYMBOL(p_to_ncname, "to_ncname", "ahri_tre_to_ncname");
+    LOAD_CORE_SYMBOL(p_parse_flavour, "parse_flavour", "ahri_tre_parse_flavour");
+    LOAD_CORE_SYMBOL(p_map_sql_type_to_tre, "map_sql_type_to_tre", "ahri_tre_map_sql_type_to_tre");
+    LOAD_CORE_SYMBOL(p_map_sql_type_to_tre_for_flavour, "map_sql_type_to_tre_for_flavour", "ahri_tre_map_sql_type_to_tre_for_flavour");
+    LOAD_CORE_SYMBOL(p_get_datasetname, "get_datasetname", "ahri_tre_get_datasetname");
+    LOAD_CORE_SYMBOL(p_get_datafilename, "get_datafilename", "ahri_tre_get_datafilename");
+    LOAD_CORE_SYMBOL(p_get_datalake_file_path, "get_datalake_file_path", "ahri_tre_get_datalake_file_path");
+    LOAD_CORE_SYMBOL(p_prepare_datafile_digest, "prepare_datafile_digest", "ahri_tre_prepare_datafile_digest");
+    LOAD_CORE_SYMBOL(p_prepare_datafile_json, "prepare_datafile_json", "ahri_tre_prepare_datafile_json");
+    LOAD_CORE_SYMBOL(p_normalise_orcid_rolename, "normalise_orcid_rolename", "ahri_tre_normalise_orcid_rolename");
+    LOAD_CORE_SYMBOL(p_makeparams_json, "makeparams_json", "ahri_tre_makeparams_json");
+    LOAD_CORE_SYMBOL(p_quote_ident, "quote_ident", "ahri_tre_quote_ident");
+    LOAD_CORE_SYMBOL(p_quote_qualified_identifier, "quote_qualified_identifier", "ahri_tre_quote_qualified_identifier");
+    LOAD_CORE_SYMBOL(p_quote_sql_str, "quote_sql_str", "ahri_tre_quote_sql_str");
+    LOAD_CORE_SYMBOL(p_julia_type_to_sql_string, "julia_type_to_sql_string", "ahri_tre_julia_type_to_sql_string");
+    LOAD_CORE_SYMBOL(p_tre_type_to_duckdb_sql, "tre_type_to_duckdb_sql", "ahri_tre_tre_type_to_duckdb_sql");
+    LOAD_CORE_SYMBOL(p_extract_table_from_sql, "extract_table_from_sql", "ahri_tre_extract_table_from_sql");
+    LOAD_CORE_SYMBOL(p_parse_in_list_values_json, "parse_in_list_values_json", "ahri_tre_parse_in_list_values_json");
+    LOAD_CORE_SYMBOL(p_parse_check_constraint_values_json, "parse_check_constraint_values_json", "ahri_tre_parse_check_constraint_values_json");
+    LOAD_CORE_SYMBOL(p_map_value_type, "map_value_type", "ahri_tre_map_redcap_value_type");
+    LOAD_CORE_SYMBOL(p_parse_redcap_choices_json, "parse_redcap_choices_json", "ahri_tre_parse_redcap_choices_json");
+    LOAD_CORE_SYMBOL(p_strip_html, "strip_html", "ahri_tre_strip_html");
+    LOAD_CORE_SYMBOL(p_infer_label_from_field_name, "infer_label_from_field_name", "ahri_tre_infer_label_from_field_name");
+    LOAD_CORE_SYMBOL(p_get_redcap_choices_for_field_json, "get_redcap_choices_for_field_json", "ahri_tre_get_redcap_choices_for_field_json");
+    LOAD_CORE_SYMBOL(p_normalize_git_remote, "normalize_git_remote", "ahri_tre_normalize_git_remote");
+    LOAD_CORE_SYMBOL(p_canonical_path, "canonical_path", "ahri_tre_canonical_path");
+    LOAD_CORE_SYMBOL(p_git_commit_info_json, "git_commit_info_json", "ahri_tre_git_commit_info_json");
+    LOAD_CORE_SYMBOL(p_caller_file_runtime, "caller_file_runtime", "ahri_tre_caller_file_runtime");
+    LOAD_CORE_SYMBOL(p_free_ptr, "free_ptr", "ahri_tre_free");
+    LOAD_CORE_SYMBOL(p_last_error, "last_error", "ahri_tre_last_error");
 
     if (p_version == NULL ||
         p_sha256_file_hex == NULL ||

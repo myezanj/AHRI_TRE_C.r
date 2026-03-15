@@ -8,3 +8,5 @@
 ^AHRITREC\.Rcheck$
 ^\.Rproj\.user$
 ^inst/tre_core/.*\.(dll|so|dylib)$
+^build_release\.R$
+^release$

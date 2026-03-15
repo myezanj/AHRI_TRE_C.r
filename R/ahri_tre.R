@@ -1,5 +1,5 @@
 # Backward-compatible script helpers.
-ahri_tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) {
+ahri_tre_load <- function(core_path = Sys.getenv("TRE_C_LIB", unset = Sys.getenv("AHRI_TRE_C_LIB", unset = ""))) {
 	if (!nzchar(core_path)) {
 		root <- normalizePath(file.path("..", ".."), mustWork = FALSE)
 		if (.Platform$OS.type == "windows") {
@@ -19,7 +19,7 @@ ahri_tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) 
 	}
 
 	if (!nzchar(core_path) || !file.exists(core_path)) {
-		stop("Could not locate AHRI TRE C shared library. Set AHRI_TRE_C_LIB.")
+		stop("Could not locate AHRI TRE C shared library. Set TRE_C_LIB or AHRI_TRE_C_LIB.")
 	}
 
 	dyn.load(core_path)

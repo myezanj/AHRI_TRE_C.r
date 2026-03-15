@@ -23,6 +23,80 @@
 .tre_state <- new.env(parent = emptyenv())
 .tre_state$core_loaded <- FALSE
 
+.tre_default_version_min <- "0.2.0"
+.tre_default_version_max <- "0.2.x"
+
+.tre_getenv_first <- function(names, unset = "") {
+  for (name in names) {
+    value <- Sys.getenv(name, unset = "")
+    if (nzchar(value)) {
+      return(value)
+    }
+  }
+  unset
+}
+
+.tre_parse_version <- function(value) {
+  m <- regexec("^\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)", value)
+  parts <- regmatches(value, m)[[1]]
+  if (length(parts) != 4) {
+    stop("Invalid C core version '", value, "'. Expected semver like '0.2.0'.", call. = FALSE)
+  }
+  as.integer(parts[2:4])
+}
+
+.tre_version_meets_min <- function(current, min_spec) {
+  min_version <- .tre_parse_version(min_spec)
+  for (i in seq_len(3)) {
+    if (current[[i]] > min_version[[i]]) return(TRUE)
+    if (current[[i]] < min_version[[i]]) return(FALSE)
+  }
+  TRUE
+}
+
+.tre_version_meets_max <- function(current, max_spec) {
+  spec <- tolower(trimws(max_spec))
+  if (grepl("x|\\*", spec)) {
+    tokens <- strsplit(spec, "\\.", fixed = FALSE)[[1]]
+    limit <- min(3L, length(tokens))
+    for (i in seq_len(limit)) {
+      token <- trimws(tokens[[i]])
+      if (token %in% c("x", "*")) {
+        return(TRUE)
+      }
+      if (!grepl("^[0-9]+$", token) || current[[i]] != as.integer(token)) {
+        return(FALSE)
+      }
+    }
+    return(TRUE)
+  }
+
+  max_version <- .tre_parse_version(spec)
+  for (i in seq_len(3)) {
+    if (current[[i]] < max_version[[i]]) return(TRUE)
+    if (current[[i]] > max_version[[i]]) return(FALSE)
+  }
+  TRUE
+}
+
+.tre_validate_core_version_window <- function() {
+  min_spec <- .tre_getenv_first(c("TRE_C_VERSION_MIN", "AHRI_TRE_C_VERSION_MIN"), .tre_default_version_min)
+  max_spec <- .tre_getenv_first(c("TRE_C_VERSION_MAX", "AHRI_TRE_C_VERSION_MAX"), .tre_default_version_max)
+  core_version <- .Call("version_R")
+  current <- .tre_parse_version(core_version)
+
+  if (!.tre_version_meets_min(current, min_spec) || !.tre_version_meets_max(current, max_spec)) {
+    stop(
+      "AHRI_TRE C core version '", core_version,
+      "' is outside the supported window [", min_spec, ", ", max_spec,
+      "]. Adjust TRE_C_VERSION_MIN/TRE_C_VERSION_MAX or install a compatible core.",
+      call. = FALSE
+    )
+  }
+
+  invisible(core_version)
+}
+
 .tre_ensure_loaded <- function(symbol = NULL) {
   if (!isTRUE(.tre_state$core_loaded)) {
     tre_load()
@@ -31,20 +105,47 @@
 
 .tre_call_chr1 <- function(symbol, arg1) {
   .tre_ensure_loaded(symbol)
-  .Call(symbol, as.character(arg1))
+  arg1 <- as.character(arg1)
+  switch(symbol,
+    sha256_file_hex_R = .Call("sha256_file_hex_R", arg1),
+    parse_flavour_R = .Call("parse_flavour_R", arg1),
+    map_sql_type_to_tre_R = .Call("map_sql_type_to_tre_R", arg1),
+    extract_table_from_sql_R = .Call("extract_table_from_sql_R", arg1),
+    parse_in_list_values_json_R = .Call("parse_in_list_values_json_R", arg1),
+    parse_redcap_choices_json_R = .Call("parse_redcap_choices_json_R", arg1),
+    strip_html_R = .Call("strip_html_R", arg1),
+    infer_label_from_field_name_R = .Call("infer_label_from_field_name_R", arg1),
+    stop("Unsupported core call symbol: ", symbol, call. = FALSE)
+  )
 }
 
 .tre_call_chr2 <- function(symbol, arg1, arg2) {
   .tre_ensure_loaded(symbol)
-  .Call(symbol, as.character(arg1), as.character(arg2))
+  arg1 <- as.character(arg1)
+  arg2 <- as.character(arg2)
+  switch(symbol,
+    verify_sha256_file_R = .Call("verify_sha256_file_R", arg1, arg2),
+    parse_check_constraint_values_json_R = .Call("parse_check_constraint_values_json_R", arg1, arg2),
+    stop("Unsupported core call symbol: ", symbol, call. = FALSE)
+  )
 }
 
 .tre_call_chr_nullable2 <- function(symbol, arg1, arg2 = NULL) {
   .tre_ensure_loaded(symbol)
+  arg1 <- as.character(arg1)
   if (is.null(arg2)) {
-    .Call(symbol, as.character(arg1), NULL)
+    switch(symbol,
+      map_value_type_R = .Call("map_value_type_R", arg1, NULL),
+      get_redcap_choices_for_field_json_R = .Call("get_redcap_choices_for_field_json_R", arg1, NULL),
+      stop("Unsupported core call symbol: ", symbol, call. = FALSE)
+    )
   } else {
-    .Call(symbol, as.character(arg1), as.character(arg2))
+    arg2 <- as.character(arg2)
+    switch(symbol,
+      map_value_type_R = .Call("map_value_type_R", arg1, arg2),
+      get_redcap_choices_for_field_json_R = .Call("get_redcap_choices_for_field_json_R", arg1, arg2),
+      stop("Unsupported core call symbol: ", symbol, call. = FALSE)
+    )
   }
 }
 
@@ -62,7 +163,7 @@
 #' @param core_path Optional path to a compiled AHRI TRE shared library.
 #'
 #' @returns Invisibly returns the loaded library path.
-tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) {
+tre_load <- function(core_path = .tre_getenv_first(c("TRE_C_LIB", "AHRI_TRE_C_LIB"), unset = "")) {
   if (!nzchar(core_path)) {
     staged_core_dir <- system.file("tre_core", package = "AHRITREC")
     if (nzchar(staged_core_dir)) {
@@ -75,7 +176,7 @@ tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) {
   }
 
   if (!nzchar(core_path)) {
-    root_env <- Sys.getenv("AHRI_TRE_C_ROOT", unset = "")
+    root_env <- .tre_getenv_first(c("TRE_C_ROOT", "AHRI_TRE_C_ROOT"), unset = "")
     roots <- character(0)
     if (nzchar(root_env)) {
       roots <- c(roots, normalizePath(root_env, mustWork = FALSE))
@@ -103,10 +204,11 @@ tre_load <- function(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = "")) {
   if (nzchar(core_path) && file.exists(core_path)) {
     dyn.load(core_path, local = FALSE)
     .tre_state$core_loaded <- TRUE
+    .tre_validate_core_version_window()
     return(invisible(core_path))
   }
 
-  stop("Could not locate AHRI TRE C shared library. Reinstall package or set AHRI_TRE_C_LIB.")
+  stop("Could not locate AHRI TRE C shared library. Reinstall package or set TRE_C_LIB/AHRI_TRE_C_LIB.")
 }
 
 #' Return the core library version

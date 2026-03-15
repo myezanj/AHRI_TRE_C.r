@@ -3,8 +3,10 @@ set -eu
 
 PKG_DIR=$(cd "$(dirname "$0")/.." && pwd)
 STAGE_DIR="$PKG_DIR/inst/tre_core"
-REF="${AHRI_TRE_C_REF:-main}"
-PULL_LATEST="${AHRI_TRE_C_PULL_LATEST:-1}"
+REF="${TRE_C_REF:-${AHRI_TRE_C_REF:-main}}"
+PULL_LATEST="${TRE_C_PULL_LATEST:-${AHRI_TRE_C_PULL_LATEST:-1}}"
+KEEP_WORK_DIR="${TRE_C_KEEP_WORK_DIR:-${AHRI_TRE_C_KEEP_WORK_DIR:-0}}"
+CORE_ROOT_ENV="${TRE_C_ROOT:-${AHRI_TRE_C_ROOT:-}}"
 
 if [ "${AHRI_TRE_C_SKIP_BOOTSTRAP:-0}" = "1" ]; then
   echo "Skipping AHRI_TRE.C bootstrap because AHRI_TRE_C_SKIP_BOOTSTRAP=1"
@@ -64,8 +66,8 @@ if [ "$PULL_LATEST" = "1" ]; then
   mkdir -p "$WORK_DIR"
   CLONE_URLS="${AHRI_TRE_C_GIT_URL:-}"
 
-  if [ -n "${AHRI_TRE_C_ROOT:-}" ]; then
-    ROOT_REMOTE=$(resolve_origin_url "$AHRI_TRE_C_ROOT")
+  if [ -n "${CORE_ROOT_ENV:-}" ]; then
+    ROOT_REMOTE=$(resolve_origin_url "$CORE_ROOT_ENV")
     if [ -n "$ROOT_REMOTE" ]; then
       CLONE_URLS="$ROOT_REMOTE ${CLONE_URLS:-}"
     fi
@@ -85,9 +87,9 @@ if [ "$PULL_LATEST" = "1" ]; then
   clone_latest_checkout "$SYNC_ROOT" "$CLONE_URLS"
   SRC_ROOT="$SYNC_ROOT"
   echo "Using refreshed AHRI_TRE.C checkout: $SRC_ROOT"
-elif [ -n "${AHRI_TRE_C_ROOT:-}" ]; then
-  SRC_ROOT="$AHRI_TRE_C_ROOT"
-  echo "Using AHRI_TRE.C from AHRI_TRE_C_ROOT without remote refresh: $SRC_ROOT"
+elif [ -n "${CORE_ROOT_ENV:-}" ]; then
+  SRC_ROOT="$CORE_ROOT_ENV"
+  echo "Using AHRI_TRE.C from TRE_C_ROOT/AHRI_TRE_C_ROOT without remote refresh: $SRC_ROOT"
 else
   for local_candidate in "$PKG_DIR/../AHRI_TRE.C" "$PKG_DIR/../AHRI_TRE.c"; do
     if [ -d "$local_candidate/c_core" ]; then
@@ -98,7 +100,7 @@ else
   done
 
   if [ -z "${SRC_ROOT:-}" ]; then
-    echo "ERROR: AHRI_TRE_C_PULL_LATEST=0 requires AHRI_TRE_C_ROOT or a sibling AHRI_TRE.C checkout." >&2
+    echo "ERROR: TRE_C_PULL_LATEST/AHRI_TRE_C_PULL_LATEST=0 requires TRE_C_ROOT/AHRI_TRE_C_ROOT or a sibling AHRI_TRE.C checkout." >&2
     exit 1
   fi
 fi
@@ -121,7 +123,12 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 echo "Configuring AHRI_TRE.C core in $BUILD_DIR"
-cmake -S "$SRC_ROOT/c_core" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+EXTRA_CFLAGS="${AHRI_TRE_C_EXTRA_CFLAGS:--Wno-unused-function}"
+if [ -n "$EXTRA_CFLAGS" ]; then
+  cmake -S "$SRC_ROOT/c_core" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$EXTRA_CFLAGS"
+else
+  cmake -S "$SRC_ROOT/c_core" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+fi
 
 echo "Building AHRI_TRE.C core"
 cmake --build "$BUILD_DIR" --config Release
@@ -175,3 +182,8 @@ fi
 echo "Staged AHRI_TRE.C shared library: $STAGE_DIR/$BASENAME"
 
 rm -rf "$BUILD_DIR"
+
+if [ "$PULL_LATEST" = "1" ] && [ "$KEEP_WORK_DIR" != "1" ]; then
+  rm -rf "$SYNC_ROOT"
+  rmdir "$WORK_DIR" 2>/dev/null || true
+fi
