@@ -4,7 +4,9 @@
 \alias{tre_load}
 \title{Load the AHRI TRE C shared library}
 \usage{
-tre_load(core_path = Sys.getenv("AHRI_TRE_C_LIB", unset = ""))
+tre_load(
+  core_path = .tre_getenv_first(c("TRE_C_LIB", "AHRI_TRE_C_LIB"), unset = "")
+)
 }
 \arguments{
 \item{core_path}{Optional path to a compiled AHRI TRE shared library.}
